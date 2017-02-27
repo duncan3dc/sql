@@ -2,6 +2,10 @@
 
 namespace duncan3dc\SqlTests;
 
+if (\PHP_OS === "WINNT") {
+    return;
+}
+
 require __DIR__ . "/handlers.php";
 
 class Handlers

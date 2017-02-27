@@ -6,6 +6,7 @@ PHPDoc API documentation is also available at [http://duncan3dc.github.io/sql/ap
 
 [![Latest Stable Version](https://poser.pugx.org/duncan3dc/sql/version.svg)](https://packagist.org/packages/duncan3dc/sql)
 [![Build Status](https://travis-ci.org/duncan3dc/sql.svg?branch=master)](https://travis-ci.org/duncan3dc/sql)
+[![Windows status](https://ci.appveyor.com/api/projects/status/uy8ksvosdvdnrev9/branch/master?svg=true)](https://ci.appveyor.com/project/duncan3dc/sql/branch/master)
 [![Coverage Status](https://coveralls.io/repos/github/duncan3dc/sql/badge.svg)](https://coveralls.io/github/duncan3dc/sql)
 
 

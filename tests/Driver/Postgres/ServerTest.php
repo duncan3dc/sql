@@ -43,6 +43,11 @@ class ServerTest extends AbstractTest
 
     public function testSetPort()
     {
+        if (\PHP_OS === "WINNT") {
+            $this->markTestSkipped();
+            return;
+        }
+
         $result = "";
         Handlers::handle("pg_connect", function ($connect, $settings) use (&$result) {
             $result = $connect;

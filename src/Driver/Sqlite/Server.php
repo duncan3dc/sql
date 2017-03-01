@@ -5,8 +5,12 @@ namespace duncan3dc\Sql\Driver\Sqlite;
 use duncan3dc\PhpIni\State;
 use duncan3dc\Sql\Driver\ServerInterface;
 use duncan3dc\Sql\Exceptions\QueryException;
+use duncan3dc\Sql\Driver\AbstractServer;
+use duncan3dc\Sql\Exceptions\NotImplementedException;
+use duncan3dc\Sql\Result as ResultInterface;
+use duncan3dc\Sql\Sql;
 
-class Server implements ServerInterface
+class Server extends AbstractServer
 {
     /**
      * @var \Sqlite3 $server The connection to the database.
@@ -93,6 +97,17 @@ class Server implements ServerInterface
 
 
     /**
+     * Check if this server supports the TRUNCATE TABLE statement.
+     *
+     * @return bool
+     */
+    public function canTruncateTables()
+    {
+        return false;
+    }
+
+
+    /**
      * Run a query.
      *
      * @param string $query The query to run
@@ -166,6 +181,96 @@ class Server implements ServerInterface
         }
 
         return $this->server->lastErrorMsg();
+    }
+
+
+    /**
+     * Get the quote characters that this driver uses for quoting identifiers.
+     *
+     * @return string
+     */
+    public function getQuoteChars()
+    {
+        return '`';
+    }
+
+
+    public function changeQuerySyntax($query)
+    {
+        $query = preg_replace("/\bISNULL\(/", "IFNULL(", $query);
+        return $query;
+    }
+
+
+    public function quoteTable($table)
+    {
+        return "`" . $table . "`";
+    }
+
+
+    public function quoteField($field)
+    {
+        return "`" . $field . "`";
+    }
+
+
+    public function getId(ResultInterface $result)
+    {
+        return $this->sql->query("SELECT last_insert_rowid()")->fetch(Sql::FETCH_ROW)[0];
+    }
+
+
+    public function getDatabases()
+    {
+        throw new NotImplementedException("getDatabases() not available in this mode");
+    }
+
+
+    public function getTables($database)
+    {
+        throw new NotImplementedException("getTables() not available in this mode");
+    }
+
+
+    public function getViews($database)
+    {
+        throw new NotImplementedException("getViews() not available in this mode");
+    }
+
+
+    public function startTransaction()
+    {
+        throw new NotImplementedException("startTransaction() not available in this mode");
+    }
+
+
+    public function endTransaction()
+    {
+        throw new NotImplementedException("endTransaction() not available in this mode");
+    }
+
+
+    public function commit()
+    {
+        throw new NotImplementedException("commit() not available in this mode");
+    }
+
+
+    public function rollback()
+    {
+        throw new NotImplementedException("rollback() not available in this mode");
+    }
+
+
+    public function lockTables(array $tables)
+    {
+        throw new NotImplementedException("lockTables() not available in this mode");
+    }
+
+
+    public function unlockTables()
+    {
+        throw new NotImplementedException("unlockTables() not available in this mode");
     }
 
 

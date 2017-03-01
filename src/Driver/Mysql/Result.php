@@ -3,14 +3,16 @@
 namespace duncan3dc\Sql\Driver\Mysql;
 
 use duncan3dc\Sql\Driver\ResultInterface;
+use duncan3dc\Sql\Driver\AbstractResult;
 
-class Result implements ResultInterface
+class Result extends AbstractResult
 {
     /**
      * @param mixed $result The driver's result reference.
      */
     private $result;
 
+    protected $position = 0;
 
     /**
      * Create a new instance.
@@ -30,7 +32,71 @@ class Result implements ResultInterface
      */
     public function getNextRow()
     {
-        return $this->result->fetch_assoc();
+        $row = $this->result->fetch_assoc();
+
+        if (is_array($row)) {
+            ++$this->position;
+        }
+
+        return $row;
+    }
+
+
+    /**
+     * Seek to a specific record of the result set.
+     *
+     * @param int $position The index of the row to position to (zero-based)
+     *
+     * @return void
+     */
+    public function seek($position)
+    {
+        $this->result->data_seek($position);
+
+        $this->position = $position;
+    }
+
+
+    /**
+     * Get the number of rows in the result set.
+     *
+     * @return int
+     */
+    public function count()
+    {
+        return $this->result->num_rows;
+    }
+
+
+    /**
+     * Get the number of columns in the result set.
+     *
+     * @return int
+     */
+    public function columnCount()
+    {
+        return $this->result->field_count;
+    }
+
+
+    /**
+     * Fetch an individual value from the result set.
+     *
+     * @param int $row The index of the row to fetch (zero-based)
+     * @param int $col The index of the column to fetch (zero-based)
+     *
+     * @return mixed
+     */
+    public function result($row, $col)
+    {
+        $position = $this->position;
+
+        $this->seek($row);
+        $value = $this->result->fetch_row()[$col];
+
+        $this->seek($position);
+
+        return $value;
     }
 
 

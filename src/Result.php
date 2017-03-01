@@ -8,13 +8,12 @@ use duncan3dc\Sql\Driver\ResultInterface as DriverResultInterface;
 /**
  * Result class for reading rows for a result set.
  */
-class Result implements ResultInterface
+class Result extends AbstractResult
 {
     /**
      * @var ResultInterface $driver The instance of the driver class handling the abstraction
      */
     private $driver;
-
 
     /**
      * Create a Result instance to provide extra functionality
@@ -40,6 +39,8 @@ class Result implements ResultInterface
         if (!is_array($row)) {
             return null;
         }
+
+        ++$this->position;
 
         return $row;
     }
@@ -72,12 +73,91 @@ class Result implements ResultInterface
 
 
     /**
+     * Fetch an individual value from the result set
+     *
+     * @param int $row The index of the row to fetch (zero-based)
+     * @param int $col The index of the column to fetch (zero-based)
+     *
+     * @return string
+     */
+    public function result($row, $col)
+    {
+        $value = $this->driver->result($row, $col);
+
+        if (is_string($value)) {
+            $value = rtrim($value);
+        }
+
+        return $value;
+    }
+
+
+    /**
+     * Seek to a specific record of the result set.
+     *
+     * @param int $position The index of the row to position to (zero-based)
+     *
+     * @return void
+     */
+    public function seek($position)
+    {
+        $this->driver->seek($position);
+        $this->position = $position;
+    }
+
+
+    /**
+     * Get the number of rows in the result set.
+     *
+     * @return int
+     */
+    public function count()
+    {
+        $rows = $this->driver->count();
+
+        if (!is_int($rows) || $rows < 0) {
+            throw new \Exception("Failed to get the row count from the result set");
+        }
+
+        return $rows;
+    }
+
+
+    /**
+     * Get the number of columns in the result set.
+     *
+     * @return int
+     */
+    public function columnCount()
+    {
+        $columns = $this->driver->columnCount();
+
+        if (!is_int($columns) || $columns < 0) {
+            throw new \Exception("Failed to get the column count from the result set");
+        }
+
+        return $columns;
+    }
+
+
+    /**
+     * Free the memory used by the result resource.
+     *
+     * @return void
+     */
+    public function free()
+    {
+        $this->driver->free();
+    }
+
+
+    /**
      * If the result source is still available then free it before tearing down the object
      *
      * @return void
      */
     public function __destruct()
     {
-        $this->driver->free();
+        $this->free();
     }
 }

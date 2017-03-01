@@ -5,8 +5,11 @@ namespace duncan3dc\Sql\Driver\Mysql;
 use duncan3dc\PhpIni\State;
 use duncan3dc\Sql\Driver\ServerInterface;
 use duncan3dc\Sql\Exceptions\QueryException;
+use duncan3dc\Sql\Driver\AbstractServer;
+use duncan3dc\Sql\Result as ResultInterface;
+use duncan3dc\Sql\Sql;
 
-class Server implements ServerInterface
+class Server extends AbstractServer
 {
     /**
      * @var \Mysqli $server The connection to the database server.
@@ -168,6 +171,17 @@ class Server implements ServerInterface
 
 
     /**
+     * Get the quote characters that this driver uses for quoting identifiers.
+     *
+     * @return string
+     */
+    public function getQuoteChars()
+    {
+        return "`";
+    }
+
+
+    /**
      * Run a query.
      *
      * @param string $query The query to run
@@ -245,5 +259,160 @@ class Server implements ServerInterface
         $this->server = null;
 
         return $result;
+    }
+
+
+    public function changeQuerySyntax($query)
+    {
+        $query = preg_replace("/\bISNULL\(/", "IFNULL(", $query);
+        $query = preg_replace("/\bSUBSTR\(/", "SUBSTRING(", $query);
+        return $query;
+    }
+
+
+    public function quoteTable($table)
+    {
+        return "`" . $table . "`";
+    }
+
+
+    public function quoteField($field)
+    {
+        return "`" . $field . "`";
+    }
+
+
+    public function bulkInsert($table, array $params, $extra = null)
+    {
+        $fields = "";
+        $first = reset($params);
+        foreach ($first as $key => $val) {
+            if ($fields) {
+                $fields .= ",";
+            }
+            $fields .= $this->quoteField($key);
+        }
+
+        $newParams = [];
+        $values = "";
+
+        foreach ($params as $row) {
+            if ($values) {
+                $values .= ",";
+            }
+            $values .= "(";
+            $first = true;
+
+            foreach ($row as $key => $val) {
+                if ($first) {
+                    $first = false;
+                } else {
+                    $values .= ",";
+                }
+                $values .= "?";
+                $newParams[] = $val;
+            }
+            $values .= ")";
+        }
+
+        if ($extra == Sql::INSERT_REPLACE) {
+            $query = "REPLACE ";
+        } elseif ($extra == Sql::INSERT_IGNORE) {
+            $query = "INSERT IGNORE ";
+        } else {
+            $query = "INSERT ";
+        }
+        $query .= "INTO " . $table . " (" . $fields . ") VALUES " . $values;
+
+        return $this->sql->query($query, $newParams);
+    }
+
+
+    public function getId(ResultInterface $result)
+    {
+        return $id = $this->mysqli->insert_id;
+    }
+
+
+    public function startTransaction()
+    {
+        return $this->mysqli->autocommit(false);
+    }
+
+
+    public function endTransaction()
+    {
+        return $this->mysqli->autocommit(true);
+    }
+
+
+    public function commit()
+    {
+        return $this->mysqli->commit();
+    }
+
+
+    public function rollback()
+    {
+        return $this->mysqli->rollback();
+    }
+
+
+    public function lockTables(array $tables)
+    {
+        return $this->sql->query("LOCK TABLES " . implode(",", $tables) . " WRITE");
+    }
+
+
+    public function unlockTables()
+    {
+        return $this->sql->query("UNLOCK TABLES");
+    }
+
+
+    public function getDatabases()
+    {
+        $databases = [];
+
+        $result = $this->sql->query("SHOW DATABASES");
+
+        $result->fetchStyle(Sql::FETCH_ROW);
+        foreach ($result as $row) {
+            $databases[] = $row[0];
+        }
+
+        return $databases;
+    }
+
+
+    public function getTables($database)
+    {
+        $tables = [];
+
+        $query = "SHOW FULL TABLES IN " . $this->quoteTable($database) . " WHERE table_type='BASE TABLE'";
+        $result = $this->sql->query($query);
+
+        $result->fetchStyle(Sql::FETCH_ROW);
+        foreach ($result as $row) {
+            $tables[] = $row[0];
+        }
+
+        return $tables;
+    }
+
+
+    public function getViews($database)
+    {
+        $views = [];
+
+        $query = "SHOW FULL TABLES IN " . $this->quoteTable($database) . " WHERE table_type='VIEW'";
+        $result = $this->sql->query($query);
+
+        $result->fetchStyle(Sql::FETCH_ROW);
+        foreach ($result as $row) {
+            $views[] = $row[0];
+        }
+
+        return $views;
     }
 }

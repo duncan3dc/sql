@@ -1,38 +1,21 @@
 <?php
 
-namespace duncan3dc\Sql\Driver\Mysql;
+namespace duncan3dc\Sql\Driver\Odbc;
 
-use duncan3dc\Sql\Driver\ResultInterface;
 use duncan3dc\Sql\Driver\AbstractResult;
 
 class Result extends AbstractResult
 {
-    /**
-     * @param mixed $result The driver's result reference.
-     */
-    private $result;
-
     protected $position = 0;
 
     /**
-     * Create a new instance.
-     *
-     * @param mixed $result Something returned by \Mysqli::query()
-     */
-    public function __construct($result)
-    {
-        $this->result = $result;
-    }
-
-
-    /**
-     * Fetch the next row from the result set.
+     * Internal method to fetch the next row from the result set.
      *
      * @return array|null
      */
     public function getNextRow()
     {
-        $row = $this->result->fetch_assoc();
+        $row = odbc_fetch_array($this->result, $this->position + 1);
 
         if (is_array($row)) {
             ++$this->position;
@@ -43,7 +26,7 @@ class Result extends AbstractResult
 
 
     /**
-     * Seek to a specific record of the result set.
+     * The odbc driver doesn't support seeking, so we fetch specific rows in getNextRow().
      *
      * @param int $position The index of the row to position to (zero-based)
      *
@@ -51,8 +34,6 @@ class Result extends AbstractResult
      */
     public function seek($position)
     {
-        $this->result->data_seek($position);
-
         $this->position = $position;
     }
 
@@ -64,7 +45,27 @@ class Result extends AbstractResult
      */
     public function count()
     {
-        return $this->result->num_rows;
+        $rows = odbc_num_rows($this->result);
+
+        # The above function is unreliable, so if we got a zero count then double check it
+        if ($rows < 1) {
+            $rows = 0;
+
+            /**
+             * If it is an update/delete then we just have to trust the odbc_num_rows() result,
+             * however it is some kind of select, then we can manually count the rows returned.
+             */
+            if (odbc_num_fields($this->result) > 0) {
+                $position = $this->position;
+                $this->seek(0);
+                while ($this->getNextRow()) {
+                    ++$rows;
+                }
+                $this->seek($position);
+            }
+        }
+
+        return $rows;
     }
 
 
@@ -75,7 +76,7 @@ class Result extends AbstractResult
      */
     public function columnCount()
     {
-        return $this->result->field_count;
+        return odbc_num_fields($this->result);
     }
 
 
@@ -85,18 +86,12 @@ class Result extends AbstractResult
      * @param int $row The index of the row to fetch (zero-based)
      * @param int $col The index of the column to fetch (zero-based)
      *
-     * @return mixed
+     * @return string
      */
     public function result($row, $col)
     {
-        $position = $this->position;
-
-        $this->seek($row);
-        $value = $this->result->fetch_row()[$col];
-
-        $this->seek($position);
-
-        return $value;
+        odbc_fetch_row($this->result, $row + 1);
+        return odbc_result($this->result, $col + 1);
     }
 
 
@@ -107,9 +102,6 @@ class Result extends AbstractResult
      */
     public function free()
     {
-        if ($this->result instanceof \mysqli_result) {
-            $this->result->free();
-            $this->result = null;
-        }
+        odbc_free_result($this->result);
     }
 }

@@ -2,10 +2,13 @@
 
 namespace duncan3dc\Sql\Driver\Postgres;
 
+use duncan3dc\Sql\Driver\AbstractServer;
+use duncan3dc\Sql\Exceptions\NotImplementedException;
+use duncan3dc\Sql\Result as ResultInterface;
 use duncan3dc\PhpIni\State;
 use duncan3dc\Sql\Driver\ServerInterface;
 
-class Server implements ServerInterface
+class Server extends AbstractServer
 {
     /**
      * @var resource $server The connection to the database server.
@@ -114,6 +117,17 @@ class Server implements ServerInterface
 
 
     /**
+     * Get the quote characters that this driver uses for quoting identifiers.
+     *
+     * @return string
+     */
+    public function getQuoteChars()
+    {
+        return '"';
+    }
+
+
+    /**
      * Run a query.
      *
      * @param string $query The query to run
@@ -198,6 +212,115 @@ class Server implements ServerInterface
      *
      * @return bool
      */
+    public function changeQuerySyntax($query)
+    {
+        $query = preg_replace("/\bI[FS]NULL\(/", "COALESCE(", $query);
+        $query = preg_replace("/\bSUBSTR\(/", "SUBSTRING(", $query);
+        $query = preg_replace("/\FROM_UNIXTIME\(([^,\)]+),(\s*)([^\)]+)\)/", "TO_CHAR(ABSTIME($1), $3)", $query);
+        return $query;
+    }
+
+
+    public function quoteTable($table)
+    {
+        $this->connect();
+        return pg_escape_identifier($this->server, $table);
+    }
+
+
+    public function quoteField($field)
+    {
+        return "`" . $field . "`";
+    }
+
+
+    public function bulkInsert($table, array $params, $extra = null)
+    {
+        $fields = "";
+        $first = reset($params);
+        foreach ($first as $key => $val) {
+            if ($fields) {
+                $fields .= ",";
+            }
+            $fields .= $this->quoteField($key);
+        }
+
+        $this->sql->query("COPY {$table} ({$fields}) FROM STDIN");
+
+        foreach ($params as $row) {
+            if (!pg_put_line($this->server, implode("\t", $row) . "\n")) {
+                return;
+            }
+        }
+
+        if (pg_put_line($this->server, "\\.\n")) {
+            return;
+        }
+
+        return new Result(pg_end_copy($this->server));
+    }
+
+
+    public function getId(ResultInterface $result)
+    {
+        return pg_last_oid($result);
+    }
+
+
+    public function startTransaction()
+    {
+        return $this->sql->query("SET AUTOCOMMIT = OFF");
+    }
+
+
+    public function endTransaction()
+    {
+        return $this->sql->query("SET AUTOCOMMIT = ON");
+    }
+
+
+    public function commit()
+    {
+        return $this->sql->query("COMMIT");
+    }
+
+
+    public function rollback()
+    {
+        return $this->sql->query("ROLLBACK");
+    }
+
+
+    public function lockTables(array $tables)
+    {
+        return $this->sql->query("LOCK TABLE " . implode(",", $tables) . " IN EXCLUSIVE MODE");
+    }
+
+
+    public function unlockTables()
+    {
+        return $this->sql->query("COMMIT");
+    }
+
+
+    public function getDatabases()
+    {
+        throw new NotImplementedException("getDatabases() not available in this mode");
+    }
+
+
+    public function getTables($database)
+    {
+        throw new NotImplementedException("getTables() not available in this mode");
+    }
+
+
+    public function getViews($database)
+    {
+        throw new NotImplementedException("getViews() not available in this mode");
+    }
+
+
     public function disconnect(): bool
     {
         if (!$this->server) {

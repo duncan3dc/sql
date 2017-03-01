@@ -1,41 +1,30 @@
 <?php
 
-namespace duncan3dc\Sql\Driver\Mysql;
+namespace duncan3dc\Sql\Driver\Mssql;
 
-use duncan3dc\Sql\Driver\ResultInterface;
 use duncan3dc\Sql\Driver\AbstractResult;
 
 class Result extends AbstractResult
 {
-    /**
-     * @param mixed $result The driver's result reference.
-     */
-    private $result;
-
-    protected $position = 0;
 
     /**
-     * Create a new instance.
-     *
-     * @param mixed $result Something returned by \Mysqli::query()
-     */
-    public function __construct($result)
-    {
-        $this->result = $result;
-    }
-
-
-    /**
-     * Fetch the next row from the result set.
+     * Internal method to fetch the next row from the result set.
      *
      * @return array|null
      */
     public function getNextRow()
     {
-        $row = $this->result->fetch_assoc();
+        sqlsrv_fetch($this->result, SQLSRV_SCROLL_ABSOLUTE, $this->position);
+        $row = sqlsrv_fetch_array($this->result, SQLSRV_FETCH_ASSOC);
 
-        if (is_array($row)) {
-            ++$this->position;
+        if (!$row) {
+            return;
+        }
+
+        foreach ($row as &$value) {
+            if ($value instanceof \DateTime) {
+                $value = $value->format(\DateTime::ISO8601);
+            }
         }
 
         return $row;
@@ -43,7 +32,7 @@ class Result extends AbstractResult
 
 
     /**
-     * Seek to a specific record of the result set.
+     * The driver doesn't support seeking, so we fetch specific rows in getNextRow().
      *
      * @param int $position The index of the row to position to (zero-based)
      *
@@ -51,8 +40,6 @@ class Result extends AbstractResult
      */
     public function seek($position)
     {
-        $this->result->data_seek($position);
-
         $this->position = $position;
     }
 
@@ -64,7 +51,7 @@ class Result extends AbstractResult
      */
     public function count()
     {
-        return $this->result->num_rows;
+        return sqlsrv_num_rows($this->result);
     }
 
 
@@ -75,7 +62,7 @@ class Result extends AbstractResult
      */
     public function columnCount()
     {
-        return $this->result->field_count;
+        return sqlsrv_num_fields($this->result);
     }
 
 
@@ -85,18 +72,11 @@ class Result extends AbstractResult
      * @param int $row The index of the row to fetch (zero-based)
      * @param int $col The index of the column to fetch (zero-based)
      *
-     * @return mixed
+     * @return string
      */
     public function result($row, $col)
     {
-        $position = $this->position;
-
-        $this->seek($row);
-        $value = $this->result->fetch_row()[$col];
-
-        $this->seek($position);
-
-        return $value;
+        return sqlsrv_result($this->result, $row, $col);
     }
 
 
@@ -107,9 +87,8 @@ class Result extends AbstractResult
      */
     public function free()
     {
-        if ($this->result instanceof \mysqli_result) {
-            $this->result->free();
-            $this->result = null;
+        if (is_resource($this->result)) {
+            sqlsrv_free_stmt($this->result);
         }
     }
 }

@@ -25,6 +25,9 @@ script:
 after_success:
   - vendor/bin/coveralls
 
+services:
+  - mysql
+
 git:
   depth: 5
 

@@ -19,6 +19,11 @@ class Sql implements SqlInterface
     private $driver;
 
     /**
+     * @var string $name The name assigned to this server.
+     */
+    private $name;
+
+    /**
      * @var bool $connected Flag to indicate whether we are connected to the server yet.
      */
     private $connected = false;
@@ -29,9 +34,21 @@ class Sql implements SqlInterface
      *
      * @param ServerInterface $driver The instance of the driver class handling the abstraction
      */
-    public function __construct(ServerInterface $driver)
+    public function __construct(ServerInterface $driver, string $name = "")
     {
         $this->driver = $driver;
+        $this->name = $name;
+    }
+
+
+    /**
+     * Get the name assigned to this server.
+     *
+     * @return string
+     */
+    public function getName(): string
+    {
+        return $this->name;
     }
 
 

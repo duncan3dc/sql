@@ -15,6 +15,14 @@ interface SqlInterface
 
 
     /**
+     * Get the name assigned to this server.
+     *
+     * @return string
+     */
+    public function getName(): string;
+
+
+    /**
      * If we have not already connected then connect to the database now.
      *
      * @return SqlInterface

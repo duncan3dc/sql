@@ -27,3 +27,5 @@
 * Can we drop the NO_WHERE_CLAUSE constant? Are there some methods we can use for this? Maybe force passing an empty array?
 
 * Counting an odbc update statement that updated 0 rows fails, as it doens't know whether there's 0 rows, or the check failed, so it tries to fetch, and you can't fetch from an update statement
+
+* Should the $connected property live on the Server instead of the Sql class. When the Sql class is passed a Server, it may already be connected

@@ -11,8 +11,11 @@ matrix:
   - php: nightly
 
 env:
-  - COMPOSER_OPTS=""
-  - COMPOSER_OPTS="--prefer-lowest"
+  global:
+    - POSTGRES_PASSWORD=""
+  matrix:
+    - COMPOSER_OPTS=""
+    - COMPOSER_OPTS="--prefer-lowest"
 
 install:
   - composer self-update --snapshot
@@ -27,6 +30,7 @@ after_success:
 
 services:
   - mysql
+  - postgresql
 
 git:
   depth: 5

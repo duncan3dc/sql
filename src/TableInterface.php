@@ -8,6 +8,9 @@ interface TableInterface
     public function batchInsert($limit);
 
 
+    public function cache(Time $time = null): TableInterface;
+
+
     public function update(array $set, array $where);
 
 

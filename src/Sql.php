@@ -3,6 +3,7 @@
 namespace duncan3dc\Sql;
 
 use duncan3dc\Log\LoggerAwareTrait;
+use duncan3dc\Sql\Cache\Sql as CacheSql;
 use duncan3dc\Sql\Driver\ResultInterface as DriverResultInterface;
 use duncan3dc\Sql\Driver\ServerInterface;
 use duncan3dc\Sql\Exceptions\ConnectionException;
@@ -40,6 +41,11 @@ class Sql implements SqlInterface, LoggerAwareInterface
      * @var boolean $allowNulls A flag to indicate whether nulls should be used or not
      */
     public $allowNulls = false;
+
+    /**
+     * @var options $options The options for the cache handling.
+     */
+    private $options;
 
     /**
      * @var boolean $transaction A flag to indicate whether we are currently in transaction mode or not
@@ -470,6 +476,20 @@ class Sql implements SqlInterface, LoggerAwareInterface
         });
 
         return $query;
+    }
+
+
+    /**
+     * Convienience method to create a cached query instance
+     */
+    public function cache(Cache $time = null)
+    {
+        $options = $this->options;
+        if ($time) {
+            $options = $options->withTime($time);
+        }
+
+        return new CacheSql($this, $options);
     }
 
 

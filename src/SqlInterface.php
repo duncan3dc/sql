@@ -139,6 +139,12 @@ interface SqlInterface
     public function definitions($data);
 
 
+    /**
+     * Convenience method to create a cached query instance.
+     */
+    public function cache($query, array $params = null, Time $time = null);
+
+
     public function error();
 
 

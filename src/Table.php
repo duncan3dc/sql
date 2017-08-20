@@ -49,6 +49,13 @@ class Table implements TableInterface
     }
 
 
+    public function cache(Time $time = null)
+    {
+        $sql = $this->sql->cache($time);
+        return new Table($this->table, $sql);
+    }
+
+
     private function query(string $query, array $params = [])
     {
         return $this->sql->query($query, $params);
